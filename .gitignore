@@ -16,6 +16,9 @@ __pycache__/
 .DS_Store
 ~$*.xlsx
 
+# 문서 (별도 공유, 레포에는 안 올림)
+/docs/
+
 # 팀 내부 계획 문서 (레포에는 코드만 — 별도 공유)
 /0. 계획.pdf
 /PowerBI_vs_Streamlit_비교.pdf

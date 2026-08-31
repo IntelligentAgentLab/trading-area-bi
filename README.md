@@ -47,9 +47,9 @@ scripts/                  데이터 수집·가공 스크립트
 data/
   ├─ raw/                 원본 데이터 (git 미포함 — 각자 준비 필요, 아래 참고)
   └─ processed/            가공된 결과 CSV (git 포함 — 바로 대시보드 실행 가능)
-
-docs/                     방법론 문서 (토픽모델링 파이프라인 설명 등)
 ```
+
+로컬에는 `docs/`에 방법론 문서(토픽모델링 파이프라인 설명 등)가 있지만 레포에는 올리지 않습니다 — 필요하면 따로 공유해드릴게요.
 
 ## 실행 방법
 
@@ -74,11 +74,6 @@ streamlit run exploration/consumer_counsel_app.py
 
 - 1372 데이터: `scripts/fetch_consumer_counsel.py` 참고 (data.go.kr 서비스키 필요)
 - BigKinds 뉴스: `data/raw/bigkinds/README.md` 참고 (수동 다운로드)
-
-## 참고 문서
-
-- `docs/news_topic_modeling.pdf` / `docs/news_text_mining.docx` — 토픽모델링 방법론 상세 설명(코드 포함)
-- `docs/consumer_counsel_api.pdf` — 1372 API 데이터 딕셔너리
 
 ## 환경 참고사항
 
