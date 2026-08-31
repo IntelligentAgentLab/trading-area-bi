@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-업종목록 = ["외식업", "소매업", "숙박업", "서비스업"]
-분기목록 = pd.period_range("2022Q1", "2025Q4", freq="Q").astype(str)
 월목록 = pd.period_range("2022-01", "2025-12", freq="M").astype(str)
 토픽목록 = ["환불·위생", "가격·인상", "배송지연", "인건비 부담", "경영난"]
 
@@ -28,19 +26,6 @@ def find_korean_font() -> str | None:
         if Path(path).exists():
             return path
     return None
-
-
-def render_filters() -> str:
-    """대시보드·토픽모델링·통합요약 페이지가 공유하는 사이드바 필터.
-
-    key="선택업종"으로 지정하면 Streamlit이 세션 동안 값을 유지하므로,
-    페이지를 이동해도 같은 업종을 계속 보게 된다 (통합 축 유지).
-    """
-    with st.sidebar:
-        st.markdown("### 🔎 공통 필터")
-        업종 = st.selectbox("업종", 업종목록, key="선택업종")
-        st.caption("이 필터는 대시보드·토픽모델링·통합요약 페이지에서 함께 적용됩니다.")
-    return 업종
 
 
 @st.cache_data

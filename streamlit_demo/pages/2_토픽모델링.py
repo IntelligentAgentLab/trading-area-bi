@@ -2,11 +2,9 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from common import render_filters, load_topics, load_topic_keywords, load_articles
+from common import load_topics, load_topic_keywords, load_articles
 
 st.set_page_config(page_title="토픽모델링", page_icon="🗣️", layout="wide")
-
-render_filters()  # 사이드바 표시용 — 이 페이지 내용 자체는 업종 선택과 무관함(아래 캡션 참고)
 
 단위 = st.radio("표시 단위", ["월", "분기"], horizontal=True, key="토픽_표시단위")
 토픽_df, 실데이터 = load_topics(단위)
@@ -16,7 +14,7 @@ render_filters()  # 사이드바 표시용 — 이 페이지 내용 자체는 �
 
 st.title(f"🗣️ 토픽모델링{'' if 실데이터 else ' (더미 데이터)'}")
 st.caption("매출 대시보드에서 궁금했던 시기를 골라, 그때 소상공인 관련 뉴스에서 어떤 이슈가 있었는지 확인하는 페이지입니다. "
-           "업종 구분은 없습니다 — 사이드바에서 업종을 바꿔도 이 페이지는 바뀌지 않습니다.")
+           "업종 구분은 없습니다 — 대시보드·인과추론과 데이터로 연결되지 않고 독립적으로 동작합니다.")
 if 실데이터:
     st.caption("BigKinds 뉴스(소상공인 OR 자영업 검색) → LDA 토픽모델링 결과입니다. "
                "표본 규모는 data/raw/bigkinds/README.md 참고. 월 단위는 표본이 더 적어 그래프가 들쭉날쭉할 수 있습니다.")

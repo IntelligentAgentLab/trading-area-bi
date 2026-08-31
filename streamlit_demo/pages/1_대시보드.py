@@ -1,11 +1,7 @@
 import streamlit as st
 
-from common import render_filters
-
 st.set_page_config(page_title="대시보드", page_icon="📊", layout="wide")
 st.title("📊 대시보드")
-
-선택업종 = render_filters()
 
 st.info(
     "🚧 A 담당(최재원·남지우) — 매출 데이터 대시보드를 여기에 구현하세요.\n\n"

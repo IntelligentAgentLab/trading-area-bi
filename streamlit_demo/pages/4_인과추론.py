@@ -1,11 +1,7 @@
 import streamlit as st
 
-from common import render_filters
-
 st.set_page_config(page_title="인과추론", page_icon="📈", layout="wide")
 st.title("📈 인과추론")
-
-선택업종 = render_filters()
 
 st.info(
     "🚧 D 담당(조소민) — DiD 등 인과추론 분석을 여기에 구현하세요.\n\n"

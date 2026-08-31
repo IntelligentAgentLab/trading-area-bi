@@ -1,8 +1,7 @@
 """1372 소비자상담 상담상세현황 실데이터 탐색 페이지.
 
-토픽모델링과 마찬가지로 대시보드·인과추론과 데이터 속성으로 연결돼 있지 않다(사이드바
-업종 필터는 표시만 되고 이 페이지 내용에는 영향을 주지 않음). 업종 매핑 없이 원본 필드
-(prdlstLclasNm 등)를 그대로 쓴다.
+토픽모델링과 마찬가지로 대시보드·인과추론과 데이터 속성으로 연결돼 있지 않다. 업종 매핑
+없이 원본 필드(prdlstLclasNm 등)를 그대로 쓴다.
 
 데이터 범위: data/raw/consumer_counsel/*.json (scripts/fetch_consumer_counsel.py로 수집,
 용량이 커서 git에는 포함하지 않음 — 없으면 안내만 뜨고 나머지 페이지는 정상 동작한다).
@@ -15,8 +14,6 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
-from common import render_filters
 
 RAW_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "raw" / "consumer_counsel"
 
@@ -102,13 +99,11 @@ def render_trend_chart(trend_df: pd.DataFrame, 표시방식: str, title: str, co
 
 st.set_page_config(page_title="소비자상담", page_icon="🔎", layout="wide")
 
-render_filters()  # 사이드바 표시용 — 이 페이지 내용 자체는 업종 선택과 무관함
-
 df = load_data()
 
 st.title("🔎 1372 소비자상담 탐색")
 st.caption("업종 구분 없이 원본 품목 분류(prdlstLclasNm 등)를 그대로 씁니다 — "
-           "사이드바에서 업종을 바꿔도 이 페이지는 바뀌지 않습니다.")
+           "대시보드·인과추론과 데이터로 연결되지 않고 독립적으로 동작합니다.")
 
 if df is None:
     st.warning(
