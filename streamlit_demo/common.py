@@ -44,31 +44,6 @@ def render_filters() -> str:
 
 
 @st.cache_data
-def generate_panel() -> pd.DataFrame:
-    """더미 상권×분기 매출 패널 (실제로는 A가 만드는 panel.csv로 교체)."""
-    rng = np.random.default_rng(42)
-    rows = []
-    for 업종 in 업종목록:
-        base = rng.integers(80, 200)
-        trend = rng.normal(0, 8, size=len(분기목록)).cumsum()
-        for i, 분기 in enumerate(분기목록):
-            매출 = max(base + trend[i], 10)
-            rows.append({"분기": 분기, "업종": 업종, "매출액(백만원)": round(매출, 1)})
-    return pd.DataFrame(rows)
-
-
-@st.cache_data
-def generate_did_baseline() -> float:
-    """더미 DiD 기본 처치효과 (실제로는 D의 statsmodels 추정치로 교체).
-
-    3_인과추론.py의 슬라이더 기본값과 4_통합요약.py의 표시값이
-    같은 숫자를 참조하도록 공통 함수로 분리했다.
-    """
-    rng = np.random.default_rng(3)
-    return round(rng.normal(-12, 3), 1)
-
-
-@st.cache_data
 def generate_topics() -> pd.DataFrame:
     """더미 월×토픽 비중 표 (실제 데이터가 없을 때의 대체용).
 
