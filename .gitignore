@@ -1,0 +1,24 @@
+# 환경변수/키
+.env
+
+# 원본 데이터 (대용량, 개인 API 키로 받거나 수동 다운로드한 데이터)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/bigkinds/
+data/raw/bigkinds/*
+!data/raw/bigkinds/README.md
+
+# 파이썬
+__pycache__/
+*.pyc
+
+# 캐시/임시
+.DS_Store
+~$*.xlsx
+
+# 팀 내부 계획 문서 (레포에는 코드만 — 별도 공유)
+/0. 계획.pdf
+/PowerBI_vs_Streamlit_비교.pdf
+/소비상권_BI_프로젝트_설계안.pdf
+/소비상권_공공데이터_비교표.xlsx
+/프로젝트_실행계획서.pdf
