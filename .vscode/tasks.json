@@ -14,20 +14,6 @@
         "reveal": "always",
         "panel": "new"
       }
-    },
-    {
-      "label": "Streamlit: Run 소비자상담 탐색",
-      "type": "shell",
-      "command": "/opt/anaconda3/bin/streamlit",
-      "args": ["run", "exploration/consumer_counsel_app.py"],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      }
     }
   ]
 }

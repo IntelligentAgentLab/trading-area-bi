@@ -1,13 +1,11 @@
-"""1372 소비자상담 상담상세현황 실데이터 탐색용 독립 Streamlit 앱.
+"""1372 소비자상담 상담상세현황 실데이터 탐색 페이지.
 
-팀 공식 프로토타입(streamlit_demo/)과는 별개로, "이 데이터로 뭘 할 수 있는지"를
-빠르게 확인하기 위한 탐색용 화면이다. 업종 매핑 없이 원본 필드(prdlstLclasNm 등)를
-그대로 쓴다.
+토픽모델링과 마찬가지로 대시보드·인과추론과 데이터 속성으로 연결돼 있지 않다(사이드바
+업종 필터는 표시만 되고 이 페이지 내용에는 영향을 주지 않음). 업종 매핑 없이 원본 필드
+(prdlstLclasNm 등)를 그대로 쓴다.
 
-실행:
-    streamlit run exploration/consumer_counsel_app.py
-
-데이터 범위: data/raw/consumer_counsel/*.json 전체 (2022-01~2026-07, 55개월 연속)
+데이터 범위: data/raw/consumer_counsel/*.json (scripts/fetch_consumer_counsel.py로 수집,
+용량이 커서 git에는 포함하지 않음 — 없으면 안내만 뜨고 나머지 페이지는 정상 동작한다).
 """
 import glob
 import json
@@ -18,7 +16,9 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-RAW_DIR = Path(__file__).resolve().parent.parent / "data" / "raw" / "consumer_counsel"
+from common import render_filters
+
+RAW_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "raw" / "consumer_counsel"
 
 온라인_유형 = {"국내온라인거래", "모바일거래", "국제온라인거래", "소셜커머스(쇼핑)"}
 
@@ -30,8 +30,10 @@ AREA_지표 = {"비중(%)", "건수", "3개월 이동평균"}
 
 
 @st.cache_data
-def load_data() -> pd.DataFrame:
+def load_data() -> pd.DataFrame | None:
     files = sorted(glob.glob(str(RAW_DIR / "*.json")))
+    if not files:
+        return None
     dfs = []
     for f in files:
         with open(f, encoding="utf-8") as fp:
@@ -98,14 +100,25 @@ def render_trend_chart(trend_df: pd.DataFrame, 표시방식: str, title: str, co
     st.plotly_chart(fig, use_container_width=True, key=chart_key)
 
 
-st.set_page_config(page_title="1372 소비자상담 탐색", page_icon="🔎", layout="wide")
+st.set_page_config(page_title="소비자상담", page_icon="🔎", layout="wide")
+
+render_filters()  # 사이드바 표시용 — 이 페이지 내용 자체는 업종 선택과 무관함
 
 df = load_data()
+
+st.title("🔎 1372 소비자상담 탐색")
+st.caption("업종 구분 없이 원본 품목 분류(prdlstLclasNm 등)를 그대로 씁니다 — "
+           "사이드바에서 업종을 바꿔도 이 페이지는 바뀌지 않습니다.")
+
+if df is None:
+    st.warning(
+        f"`{RAW_DIR}`에 데이터가 없습니다. `scripts/fetch_consumer_counsel.py`를 먼저 실행해 "
+        "1372 소비자상담 데이터를 받아주세요(data.go.kr 서비스키 필요)."
+    )
+    st.stop()
+
 전체월 = sorted(df["월"].unique())
 대분류_건수 = df["prdlstLclasNm"].value_counts()
-
-# ── 상단 컨트롤 섹션 (기존 좌측 사이드바를 메인 화면 상단으로 이동) ──────────
-st.title("🔎 1372 소비자상담 탐색")
 
 col_m1, col_m2 = st.columns(2)
 col_m1.metric("전체 건수", f"{len(df):,}건")
