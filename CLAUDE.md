@@ -20,9 +20,10 @@ cd streamlit_demo && streamlit run app.py
 # 뉴스 토픽모델링 재생성 (data/raw/bigkinds/*.xlsx가 바뀌었을 때만)
 python3 scripts/build_news_topics.py --n-topics 8
 
-# 1372 소비자상담 데이터 수집 (.env에 DATA_GO_KR_SERVICE_KEY 필요)
+# 1372 소비자상담 데이터 수집 (.env에 DATA_GO_KR_SERVICE_KEY 필요) + 집계 CSV 재생성
 python3 scripts/fetch_consumer_counsel.py --test   # 1페이지만 빠르게 확인
 python3 scripts/fetch_consumer_counsel.py --minutes 20
+python3 scripts/build_consumer_counsel_summary.py
 ```
 
 pytest 같은 테스트 스위트는 없습니다. 페이지를 수정한 뒤 검증하는 관행은
@@ -52,19 +53,24 @@ assert not at.exception
 확인하지 않은 채로 페이지 간 결합(예: 공통 사이드바 필터)을 되살리지 마세요 — 지금은 페이지를
 잇는 공통 필터·session_state 키가 없는 상태입니다.
 
-**"실데이터 있으면 쓰고 없으면 더미로 폴백" 로더 패턴** (`streamlit_demo/common.py`): 페이지가
-필요로 하는 데이터는 전부 `load_X()` 함수를 거칩니다 — `data/processed/` 아래 가공된 CSV가
-있는지 확인해서, 있으면 그걸 쓰고 없으면 `generate_X()` 더미 생성기(같은 스키마의 가짜 값)로
-폴백하며, `(데이터프레임, 실데이터여부: bool)` 튜플을 반환합니다. 페이지는 이 bool로 "(더미 데이터)"
-표시를 켜고 끕니다. 이 패턴 덕분에 한 사람의 페이지가 다른 사람의 데이터 파이프라인이 없어도
-동작합니다 — `1_대시보드.py`/`4_인과추론.py`도 나중에 실제 데이터 파이프라인을 만들 때 이 패턴을
-따라야 합니다(`load_topics()`가 참고할 구현 예시). 가공된 CSV가 없다고 페이지가 그냥 죽게
-만들지 마세요.
+**"실데이터 있으면 쓰고 없으면 폴백" 로더 패턴** (`streamlit_demo/common.py`, `pages/3_소비자상담.py`):
+페이지가 필요로 하는 데이터는 전부 `load_X()` 함수를 거칩니다 — `data/processed/` 아래 가공된
+CSV가 있는지 확인해서 있으면 그걸 씁니다. 두 가지 변형이 있음:
+- 더미로 대체 가능한 경우(`common.py`의 `load_topics()`): 없으면 `generate_X()` 더미 생성기
+  (같은 스키마의 가짜 값)로 폴백하고 `(데이터프레임, 실데이터여부: bool)` 튜플을 반환, 페이지는
+  이 bool로 "(더미 데이터)" 표시를 켜고 끔.
+- 더미로 대체하기 애매한 경우(`3_소비자상담.py`의 `load_monthly()`/`load_region()`): 없으면
+  `None`을 반환하고 페이지가 `st.warning()` + `st.stop()`으로 안내만 하고 멈춤(가짜 상담 데이터를
+  지어내지 않음).
+
+어느 쪽이든 이 패턴 덕분에 한 사람의 페이지가 다른 사람의 데이터 파이프라인이 없어도 동작합니다
+— `1_대시보드.py`/`4_인과추론.py`도 나중에 실제 데이터 파이프라인을 만들 때 이 패턴을 따라야
+합니다. 가공된 CSV가 없다고 페이지가 그냥 죽게 만들지 마세요.
 
 **데이터 흐름**: `scripts/*.py`(데이터 수집·가공, Streamlit 프로세스와 별개로 수동 실행) →
-`data/processed/*.csv`(git에 커밋됨, 용량 작음) → `common.py` 로더 → 페이지. `data/raw/`(용량
-크고 개인 API 키나 수동 다운로드가 필요한 원본 데이터)는 `data/raw/bigkinds/README.md`만 빼고
-git에서 제외돼 있고, `data/processed/`는 커밋돼 있어서 아무도 파이프라인 스크립트를 다시 안
+`data/processed/*.csv`(git에 커밋됨, 용량 작음) → 페이지(또는 `common.py` 경유). `data/raw/`
+(용량 크고 개인 API 키나 수동 다운로드가 필요한 원본 데이터)는 `data/raw/bigkinds/README.md`만
+빼고 git에서 제외돼 있고, `data/processed/`는 커밋돼 있어서 아무도 파이프라인 스크립트를 다시 안
 돌려도 앱이 바로 돌아갑니다.
 
 - `scripts/build_news_topics.py`: BigKinds 뉴스 엑셀 → Okt 형태소분석 → CountVectorizer →
@@ -75,7 +81,13 @@ git에서 제외돼 있고, `data/processed/`는 커밋돼 있어서 아무도 �
   사람이 보고 수동으로 붙인 것이라 자동 재생성되지 않습니다 — 코퍼스나 `--n-topics`를 바꾸면
   다시 확인해야 함.
 - `scripts/fetch_consumer_counsel.py`: 1372 data.go.kr API를 월 단위로 페이지네이션해서
-  `data/raw/consumer_counsel/*.json`에 저장(월별 파일 1개, 이미 받은 월은 건너뜀).
+  `data/raw/consumer_counsel/*.json`에 저장(월별 파일 1개, 이미 받은 월은 건너뜀). 원본이라
+  213만 건/1.8GB — git에 못 올림.
+- `scripts/build_consumer_counsel_summary.py`: 위 원본을 페이지가 실제 쓰는 조합으로만 미리
+  집계해 `data/processed/consumer_counsel_monthly.csv`(월별, 지역 없음)와
+  `consumer_counsel_region.csv`(지역별, 월 없음)로 나눠 저장 — 합쳐서 13MB 수준이라 git에 커밋됨.
+  하나로 합쳐서 집계하면(월×지역 다 포함) 60만 행/58MB로 거의 안 줄어드니 탭이 실제로 필요한
+  차원별로 나눠서 집계하는 게 핵심.
 
 **한글 식별자**: 변수·함수명이 한글(도메인 용어: `업종`, `분기`, `기간`, `토픽`)과 영어(라이브러리
 호출, 범용 헬퍼)를 섞어 씁니다. 전부 영어나 전부 한글로 통일하려 하지 말고 기존 파일의 관례를

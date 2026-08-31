@@ -13,15 +13,8 @@
 
 ## 아키텍처 노트 — 페이지 간 독립성
 
-**토픽모델링(②)과 소비자상담(③) 페이지는 대시보드(①)·인과추론(④)과 데이터 속성으로
-연결돼 있지 않습니다.** 원래 계획에서는 "업종"을 공통 축으로 네 페이지를 다 엮으려 했는데,
-"매출 급변 시기의 원인 뉴스"가 꼭 그 업종명을 포함할 필요는 없다는 점 때문에 방향을
-바꿨습니다. 그래서:
-
 - `2_토픽모델링.py`, `3_소비자상담.py`는 업종 선택과 무관하게 독자적으로 동작합니다.
-- 공통 사이드바 필터(`render_filters()`)는 없앴습니다 — 지금은 아무 페이지도 실제로 그걸
-  필요로 하지 않아서입니다. 대시보드·인과추론(①④)을 만들다가 업종 등 공유할 축이 필요해지면
-  그때 서로 협의해서 다시 만들면 됩니다.
+
 - `5_통합요약.py`는 네 페이지 결과를 한 화면에 모으는 페이지라 A·C·D 결과물을 전부 참조합니다 —
   각자 작업이 어느 정도 끝난 뒤 마지막에 같이 손보면 됩니다.
 
@@ -39,8 +32,9 @@ streamlit_demo/          팀 공식 데모 (멀티페이지 Streamlit 앱)
       └─ 5_통합요약.py        통합 요약 (마지막에 다같이)
 
 scripts/                  데이터 수집·가공 스크립트
-  ├─ fetch_consumer_counsel.py   1372 API 수집
-  └─ build_news_topics.py        BigKinds 뉴스 → LDA 토픽모델링
+  ├─ fetch_consumer_counsel.py            1372 API 수집 (원본 JSON)
+  ├─ build_consumer_counsel_summary.py    원본 → 집계 CSV(월별/지역별, git 포함)
+  └─ build_news_topics.py                 BigKinds 뉴스 → LDA 토픽모델링
 
 data/
   ├─ raw/                 원본 데이터 (git 미포함 — 각자 준비 필요, 아래 참고)
@@ -63,13 +57,16 @@ cd streamlit_demo
 streamlit run app.py
 ```
 
-`data/processed/`의 CSV(뉴스 토픽 결과 등)는 git에 포함돼 있어서, 토픽모델링 페이지는 별도
-데이터 다운로드 없이 바로 실행됩니다. `data/raw/`(1372 원본 JSON, BigKinds 원본 엑셀)는 용량이
-크고 개인 API 키/수동 다운로드가 필요해 git에서 제외했습니다 — 소비자상담 페이지를 실데이터로
-보려면 아래를 참고해 준비하세요(없어도 안내 문구만 뜨고 나머지 페이지는 정상 동작합니다).
+`data/processed/`의 CSV는 git에 포함돼 있어서, 토픽모델링·소비자상담 페이지는 **별도 데이터
+다운로드 없이 클론만 받아도 바로 실행됩니다.** 원본(1372 JSON 1.8GB, BigKinds 엑셀)은 용량이
+크고 개인 API 키/수동 다운로드가 필요해 git에서 제외했고, 대신 대시보드가 쓰는 만큼만 미리
+집계해둔 작은 CSV(`consumer_counsel_monthly.csv`, `consumer_counsel_region.csv` 등)를 커밋해뒀습니다.
 
-- 1372 데이터: `scripts/fetch_consumer_counsel.py` 참고 (data.go.kr 서비스키 필요)
-- BigKinds 뉴스: `data/raw/bigkinds/README.md` 참고 (수동 다운로드)
+원본부터 다시 만들고 싶다면(예: 기간을 늘리거나 재집계):
+
+- 1372 데이터: `scripts/fetch_consumer_counsel.py`로 원본 수집(data.go.kr 서비스키 필요) →
+  `scripts/build_consumer_counsel_summary.py`로 집계 CSV 재생성
+- BigKinds 뉴스: `data/raw/bigkinds/README.md` 참고해 수동 다운로드 → `scripts/build_news_topics.py`
 
 ## 환경 참고사항
 
