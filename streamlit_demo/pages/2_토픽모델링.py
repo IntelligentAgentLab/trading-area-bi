@@ -26,6 +26,12 @@ if 실데이터:
 
 st.subheader(f"{단위}별 토픽 {표시값} 추이")
 fig = px.area(토픽_df, x="기간", y=표시값, color="토픽")
+if 표시값 == "개수":
+    # 비중(%)은 8개를 다 쌓아야 100%라는 의미가 생기지만, 개수는 토픽마다 크기가 달라서
+    # 처음부터 다 쌓아 보여주면 뭐가 뭔지 알아보기 어렵다 — 범례를 눌러서 보고 싶은 토픽만
+    # 켜도록 전부 숨긴 채로 시작한다.
+    fig.for_each_trace(lambda t: t.update(visible="legendonly"))
+    st.caption("범례를 눌러서 보고 싶은 토픽만 켜보세요.")
 st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
