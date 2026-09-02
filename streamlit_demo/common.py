@@ -56,30 +56,18 @@ def _aggregate_topics(월별_df: pd.DataFrame, 단위: str) -> pd.DataFrame:
     LDA는 문서마다 토픽 가중치 합이 1이 되게 나오므로, 문서수로 가중평균한 월별 비중(%)의
     평균이 곧 분기 단위로 직접 계산했을 때의 비중(%)과 정확히 같다 — 그래서 build_news_topics.py가
     분기를 따로 저장하지 않고, 여기서 그때그때 묶어도 결과가 달라지지 않는다.
-
-    "개수"는 비중(%)/100 × 문서수로 역산한 것 — 문서 하나가 여러 토픽에 확률적으로 걸쳐 있는
-    LDA 특성상 정수로 딱 떨어지지 않는 "예상 건수"다(예: 3.7건). 비중은 월/분기별 상대 크기
-    비교에, 개수는 절대적인 기사량 비교에 쓰라고 둘 다 계산해둔다. 분기로 묶을 때 비중은
-    가중평균(합쳐서 다시 100%로), 개수는 그냥 합산(3개월치를 더하면 됨 — 이쪽은 원래도
-    가산적인 양이라 가중평균이 필요 없다).
     """
-    df = 월별_df.copy()
-    df["개수"] = (df["비중(%)"] / 100 * df["문서수"]).round(1)
-
     if 단위 == "월":
-        return df[["월", "토픽", "비중(%)", "개수"]].rename(columns={"월": "기간"})
+        return 월별_df[["월", "토픽", "비중(%)"]].rename(columns={"월": "기간"})
 
+    df = 월별_df.copy()
     df["분기"] = pd.to_datetime(df["월"], format="%Y-%m").dt.to_period("Q").astype(str)
 
     def _wavg(g: pd.DataFrame) -> float:
         return np.average(g["비중(%)"], weights=g["문서수"])
 
-    비중 = df.groupby(["분기", "토픽"]).apply(_wavg, include_groups=False).reset_index(name="비중(%)")
-    비중["비중(%)"] = 비중.groupby("분기")["비중(%)"].transform(lambda x: round(x / x.sum() * 100, 1))
-
-    개수 = df.groupby(["분기", "토픽"])["개수"].sum().round(1).reset_index()
-
-    q = 비중.merge(개수, on=["분기", "토픽"])
+    q = df.groupby(["분기", "토픽"]).apply(_wavg, include_groups=False).reset_index(name="비중(%)")
+    q["비중(%)"] = q.groupby("분기")["비중(%)"].transform(lambda x: round(x / x.sum() * 100, 1))
     return q.rename(columns={"분기": "기간"})
 
 
@@ -87,10 +75,10 @@ def _aggregate_topics(월별_df: pd.DataFrame, 단위: str) -> pd.DataFrame:
 def load_topics(단위: str = "분기") -> tuple[pd.DataFrame, bool]:
     """news_topic_shares.csv(build_news_topics.py 산출물)가 있으면 실데이터를, 없으면 더미를 반환.
 
-    단위="월"이면 월별 원본 그대로, 단위="분기"면 문서수 가중평균(비중)·합산(개수)으로 분기
-    단위로 묶어서 반환한다. 반환 컬럼은 항상 "기간"(월 또는 분기 문자열)·"토픽"·"비중(%)"·"개수".
-    업종 컬럼은 없다(업종별로 뉴스를 가르지 않기로 했기 때문). 두 번째 반환값(실데이터 여부)으로
-    페이지에서 "더미 데이터" 표시를 켜고 끌 수 있다.
+    단위="월"이면 월별 원본 그대로, 단위="분기"면 문서수 가중평균으로 분기 단위로 묶어서 반환한다.
+    반환 컬럼은 항상 "기간"(월 또는 분기 문자열)·"토픽"·"비중(%)". 업종 컬럼은 없다(업종별로
+    뉴스를 가르지 않기로 했기 때문). 두 번째 반환값(실데이터 여부)으로 페이지에서
+    "더미 데이터" 표시를 켜고 끌 수 있다.
     """
     if TOPIC_SHARES_PATH.exists():
         df = pd.read_csv(TOPIC_SHARES_PATH, encoding="utf-8-sig")
