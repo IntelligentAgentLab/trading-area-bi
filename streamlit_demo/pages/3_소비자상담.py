@@ -21,8 +21,10 @@ REGION_PATH = PROCESSED_DIR / "consumer_counsel_region.csv"
 CHART_HEIGHT = 560
 
 표시방식_목록 = ["비중(%)", "건수", "3개월 이동평균", "전월 대비(%)", "전년 동월 대비(%)"]
-# 누적/합산이 의미 있는 지표는 area, 증감률처럼 합산이 무의미한 지표는 line으로 그림
-AREA_지표 = {"비중(%)", "건수", "3개월 이동평균"}
+# 불만유형/중분류가 여러 개라 area(누적)로 쌓으면 서로 가려서 개별 추이를 읽기 어려움 —
+# 전부 line(겹침)으로 그린다. AREA_지표는 이제 비워뒀지만, 나중에 "역시 누적이 나은
+# 지표가 있다"고 판단되면 여기에 다시 추가하면 된다(render_trend_chart가 그 집합만 area로 그림).
+AREA_지표: set[str] = set()
 
 
 @st.cache_data
