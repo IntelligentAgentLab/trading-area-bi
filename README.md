@@ -68,7 +68,7 @@ streamlit run app.py
   `scripts/build_consumer_counsel_summary.py`로 집계 CSV 재생성
 - BigKinds 뉴스: `data/raw/bigkinds/README.md` 참고해 수동 다운로드 → `scripts/build_news_topics.py`
 
-## 환경 참고사항
+## 환경 참고사항.
 
 - 형태소 분석기 `konlpy.tag.Okt`는 **Java(JDK) 설치가 필요**합니다. `build_news_topics.py`를
   직접 돌릴 사람만 해당(이미 만들어진 `data/processed/*.csv`를 쓰는 대시보드 실행에는 불필요).
