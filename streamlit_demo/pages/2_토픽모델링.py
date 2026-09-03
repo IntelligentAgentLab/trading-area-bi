@@ -13,11 +13,9 @@ st.set_page_config(page_title="토픽모델링", page_icon="🗣️", layout="wi
 토픽목록_실제 = sorted(토픽_df["토픽"].unique())
 
 st.title(f"🗣️ 토픽모델링{'' if 실데이터 else ' (더미 데이터)'}")
-st.caption("매출 대시보드에서 궁금했던 시기를 골라, 그때 소상공인 관련 뉴스에서 어떤 이슈가 있었는지 확인하는 페이지입니다. "
-           "업종 구분은 없습니다 — 대시보드·인과추론과 데이터로 연결되지 않고 독립적으로 동작합니다.")
+st.caption("")
 if 실데이터:
-    st.caption("BigKinds 뉴스(소상공인 OR 자영업 검색) → LDA 토픽모델링 결과입니다. "
-               "표본 규모는 data/raw/bigkinds/README.md 참고. 월 단위는 표본이 더 적어 그래프가 들쭉날쭉할 수 있습니다.")
+    st.caption("")
 
 st.subheader(f"{단위}별 토픽 비중 추이")
 # area(누적)로 그리면 토픽이 8개라 위로 쌓이면서 겹쳐서, 각 토픽 개별 추이를 읽기 어려웠음 —
