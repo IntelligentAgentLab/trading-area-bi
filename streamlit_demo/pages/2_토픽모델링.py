@@ -20,7 +20,9 @@ if 실데이터:
                "표본 규모는 data/raw/bigkinds/README.md 참고. 월 단위는 표본이 더 적어 그래프가 들쭉날쭉할 수 있습니다.")
 
 st.subheader(f"{단위}별 토픽 비중 추이")
-fig = px.area(토픽_df, x="기간", y="비중(%)", color="토픽")
+# area(누적)로 그리면 토픽이 8개라 위로 쌓이면서 겹쳐서, 각 토픽 개별 추이를 읽기 어려웠음 —
+# line으로 바꿔서 겹쳐 그리면 서로 가리지 않고 각자의 흐름을 그대로 비교할 수 있다.
+fig = px.line(토픽_df, x="기간", y="비중(%)", color="토픽", markers=True)
 st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
