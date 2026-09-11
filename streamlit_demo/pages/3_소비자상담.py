@@ -100,8 +100,6 @@ def render_trend_chart(trend_df: pd.DataFrame, 표시방식: str, title: str, co
     st.plotly_chart(fig, use_container_width=True, key=chart_key)
 
 
-st.set_page_config(page_title="소비자상담", page_icon="🔎", layout="wide")
-
 월별_df = load_monthly()
 지역별_df = load_region()
 
