@@ -1,6 +1,5 @@
 import streamlit as st
 
-st.set_page_config(page_title="대시보드", page_icon="📊", layout="wide")
 st.title("📊 대시보드")
 
 st.info(

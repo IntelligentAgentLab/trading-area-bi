@@ -4,8 +4,6 @@ import streamlit as st
 
 from common import load_topics, load_topic_keywords, load_articles
 
-st.set_page_config(page_title="토픽모델링", page_icon="🗣️", layout="wide")
-
 단위 = st.radio("표시 단위", ["월", "분기"], horizontal=True, key="토픽_표시단위")
 토픽_df, 실데이터 = load_topics(단위)
 토픽키워드 = load_topic_keywords()  # 실데이터일 때만 채워짐 — {토픽명: [키워드,...]}

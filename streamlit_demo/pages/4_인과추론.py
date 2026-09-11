@@ -1,6 +1,5 @@
 import streamlit as st
 
-st.set_page_config(page_title="인과추론", page_icon="📈", layout="wide")
 st.title("📈 인과추론")
 
 st.info(

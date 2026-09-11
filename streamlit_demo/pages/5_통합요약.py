@@ -1,6 +1,5 @@
 import streamlit as st
 
-st.set_page_config(page_title="통합요약", page_icon="🧩", layout="wide")
 st.title("🧩 통합요약 — 현상 → 원인 → 효과")
 
 st.info(
