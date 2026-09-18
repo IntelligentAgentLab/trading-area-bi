@@ -65,14 +65,17 @@ def load_csv_from_url(url):
 
 # 2. 바이너리 파일 (Excel, ZIP 등) 불러오기용 (캐싱 적용)
 @st.cache_data(show_spinner=False)
-def fetch_binary_from_url(url):
-    try:
-        res = requests.get(url)
-        res.raise_for_status()
-        return res.content
-    except Exception as e:
-        st.error(f"파일 다운로드 실패 ({url}): {e}")
+def read_table(b):
+    if b is None:
         return None
+    # 이미 DataFrame 객체라면 변환 없이 그대로 반환
+    if isinstance(b, pd.DataFrame):
+        return b
+    # bytes/bytearray 타입일 경우에만 io.BytesIO 사용
+    if isinstance(b, (bytes, bytearray)):
+        return pd.read_csv(io.BytesIO(b), encoding="cp949", encoding_errors="ignore")
+
+    return None
 
 # ════════════════════════════════════════════════════════════════
 # 유틸 & 로더 (causal_app 검증본 재사용)
