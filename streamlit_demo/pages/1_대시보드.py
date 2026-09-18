@@ -32,6 +32,28 @@ GU25 = ["종로구","중구","용산구","성동구","광진구","동대문구",
         "영등포구","동작구","관악구","서초구","강남구","송파구","강동구"]
 YEARS = (2023, 2024, 2025)
 
+# ════════════════════════════════════════════════════════════════
+# GitHub Raw URL 로딩 함수 추가
+# ════════════════════════════════════════════════════════════════
+# 1. 일반 CSV / 텍스트 파일 불러오기용 (캐싱 적용)
+@st.cache_data(show_spinner=False)
+def load_csv_from_url(url):
+    try:
+        return pd.read_csv(url)
+    except Exception as e:
+        st.error(f"데이터 로드 실패 ({url}): {e}")
+        return None
+
+# 2. 바이너리 파일 (Excel, ZIP 등) 불러오기용 (캐싱 적용)
+@st.cache_data(show_spinner=False)
+def fetch_binary_from_url(url):
+    try:
+        res = requests.get(url)
+        res.raise_for_status()
+        return res.content
+    except Exception as e:
+        st.error(f"파일 다운로드 실패 ({url}): {e}")
+        return None
 
 # ════════════════════════════════════════════════════════════════
 # 유틸 & 로더 (causal_app 검증본 재사용)
@@ -247,41 +269,71 @@ METRICS_ALL = ["발행", "판매", "결제", "매출", "유동인구", "직장�
 
 
 # ════════════════════════════════════════════════════════════════
-# 사이드바
+# 사이드바 (기존 file_uploader ➔ Raw URL 읽기로 변경)
 # ════════════════════════════════════════════════════════════════
 st.title("🔬 서울사랑상품권 × 상권  EDA 대시보드")
 st.caption("인과추론 이전 단계 — 데이터를 여러 각도로 살펴봅니다. 분포·결측·커버리지·시즌성·관계.")
 
+# ⚠️ 본인의 GitHub 사용자명 / 리포지토리명 / 브랜치명에 맞춰 BASE_URL 설정
+GITHUB_BASE_URL = "https://raw.githubusercontent.com/kwjw0/trading-area-bi/namjiwoo"
+
 with st.sidebar:
-    st.header("상품권")
-    f_pay = st.file_uploader("결제내역 (월별 xlsx 여러 개/zip)", type=["xlsx", "zip"],
-                             accept_multiple_files=True, key="p")
-    f_iss = st.file_uploader("발행·판매 xlsx", type=["xlsx"], key="i")
-    f_mer = st.file_uploader("가맹점 csv", type=["csv", "txt", "tsv"], key="m")
-    st.header("상권 자치구 (2023~2025)")
-    f_sales = st.file_uploader("추정매출-자치구", type=["csv","txt","tsv"], key="s")
-    f_flow = st.file_uploader("길단위인구-자치구", type=["csv","txt","tsv"], key="f")
-    f_work = st.file_uploader("직장인구-자치구", type=["csv","txt","tsv"], key="w")
-    f_store = st.file_uploader("점포-자치구", type=["csv","txt","tsv"], key="st")
-    f_change = st.file_uploader("상권변화지표-자치구", type=["csv","txt","tsv"], key="c")
+    st.header("⚙️ 데이터 로드 설정")
+    st.info("GitHub Raw URL을 통해 지정된 경로에서 데이터를 자동으로 가져옵니다.")
 
-pay = load_payment([(f.name, f.getvalue()) for f in f_pay]) if f_pay else None
-iss = load_issue(f_iss.getvalue()) if f_iss else None
-mer = load_merchant(f_mer.getvalue()) if f_mer else None
+# ----------------------------------------------------------------
+# 1. 파일 경로 설정 (GitHub 리포지토리 상대 경로 지정)
+# ----------------------------------------------------------------
+# 상권 자치구 데이터 CSV 경로 (예시)
+sales_url  = f"{GITHUB_BASE_URL}/data/raw/seoul trading-area/서울시 상권분석서비스(추정매출-자치구).csv" 
+flow_url   = f"{GITHUB_BASE_URL}/data/raw/seoul trading-area/서울시 상권분석서비스(길단위인구-자치구).csvv"
+work_url   = f"{GITHUB_BASE_URL}/data/raw/seoul trading-area/서울시 상권분석서비스(직장인구-자치구).csv"
+store_url  = f"{GITHUB_BASE_URL}/data/raw/seoul trading-area/서울시 상권분석서비스(점포-자치구).csv"
+change_url = f"{GITHUB_BASE_URL}/data/raw/seoul trading-area/서울시 상권분석서비스(상권변화지표-자치구).csv"
 
-if pay is None and iss is None and f_sales is None:
-    st.info("왼쪽에서 파일을 하나 이상 올리면 탐색이 시작됩니다. 상품권과 상권 파일을 함께 올릴수록 "
-            "관계 탐색이 풍부해집니다.")
-    st.stop()
+# 상품권 데이터 경로 (예시 - 필요시 실제 파일 이름으로 변경)
+payments_zip_url = [f"{GITHUB_BASE_URL}data/raw/seoul trading-area/2023년 자치구별 업종별 서울사랑상품권 결제내역.zip",
+                    f"{GITHUB_BASE_URL}data/raw/seoul trading-area/2024년 자치구별 업종별 서울사랑상품권 결제내역.zip",
+                    f"{GITHUB_BASE_URL}data/raw/seoul trading-area/2025년 자치구별 업종별 서울사랑상품권 결제내역.zip"
+]
+issue_url  = f"{GITHUB_BASE_URL}/data/raw/seoul trading-area/월별 서울사랑상품권 발행 및 판매 현황(202404~202603).xlsx"
+merchant_url = f"{GITHUB_BASE_URL}/data/raw/seoul trading-area/서울사랑상품권 유효 가맹점(25.8.22 기준).csv"
 
-panel = build_panel(pay, iss,
-                    f_sales.getvalue() if f_sales else None,
-                    f_flow.getvalue() if f_flow else None,
-                    f_work.getvalue() if f_work else None,
-                    f_store.getvalue() if f_store else None,
-                    f_change.getvalue() if f_change else None)
+# ----------------------------------------------------------------
+# 2. 데이터 가져오기 및 가공
+# ----------------------------------------------------------------
+# (1) CSV 상권 데이터 로드
+df_sales  = load_csv_from_url(sales_url)
+df_flow   = load_csv_from_url(flow_url)
+df_work   = load_csv_from_url(work_url)
+df_store  = load_csv_from_url(store_url)
+df_change = load_csv_from_url(change_url)
+
+# (2) 결제내역 ZIP 파일 3개 순회 수신
+payment_files = []
+for url in payments_zip_urls:
+    b = fetch_binary_from_url(url)
+    if b:
+        filename = url.split("/")[-1]
+        payment_files.append((filename, b))
+
+# 3개 ZIP 파일 바이너리가 포함된 리스트 전달
+pay = load_payment(payment_files) if payment_files else None
+
+# (3) 발행 및 가맹점 파일 처리
+issue_bytes = fetch_binary_from_url(issue_url)
+iss = load_issue(issue_bytes) if issue_bytes else None
+
+merchant_bytes = fetch_binary_from_url(merchant_url)
+mer = load_merchant(merchant_bytes) if merchant_bytes else None
+
+# ----------------------------------------------------------------
+# 3. 통합 패널 빌드
+# ----------------------------------------------------------------
+panel = build_panel(pay, iss, df_sales, df_flow, df_work, df_store, df_change)
 have = [m for m in METRICS_ALL if m in panel.columns and panel[m].notna().any()]
 
+# (이하 대시보드 탭 t0~t5 로직은 기존과 동일)
 
 # ════════════════════════════════════════════════════════════════
 # 탭
