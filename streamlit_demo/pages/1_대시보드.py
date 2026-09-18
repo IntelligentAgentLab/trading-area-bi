@@ -36,12 +36,31 @@ YEARS = (2023, 2024, 2025)
 # GitHub Raw URL 로딩 함수 추가
 # ════════════════════════════════════════════════════════════════
 # 1. 일반 CSV / 텍스트 파일 불러오기용 (캐싱 적용)
+import io
+import requests
+import pandas as pd
+import streamlit as st
+
 @st.cache_data(show_spinner=False)
 def load_csv_from_url(url):
     try:
-        return pd.read_csv(url)
+        # 1. requests로 URL의 바이너리 데이터를 직접 수신 (URL 한글 처리 자동)
+        res = requests.get(url)
+        res.raise_for_status()
+        
+        # 2. 한글 파일 인코딩(CP949/EUC-KR, UTF-8 등)을 순차적으로 시도하여 읽기
+        content = res.content
+        for enc in ("cp949", "utf-8-sig", "utf-8"):
+            try:
+                return pd.read_csv(io.BytesIO(content), encoding=enc)
+            except (UnicodeDecodeError, Exception):
+                continue
+                
+        # 3. 예외 처리용 디코딩
+        return pd.read_csv(io.BytesIO(content), encoding="cp949", encoding_errors="ignore")
+        
     except Exception as e:
-        st.error(f"데이터 로드 실패 ({url}): {e}")
+        st.error(f"CSV 로드 실패 ({url}): {e}")
         return None
 
 # 2. 바이너리 파일 (Excel, ZIP 등) 불러오기용 (캐싱 적용)
