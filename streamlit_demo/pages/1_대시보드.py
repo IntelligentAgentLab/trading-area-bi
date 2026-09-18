@@ -294,7 +294,7 @@ st.title("🔬 서울사랑상품권 × 상권  EDA 대시보드")
 st.caption("인과추론 이전 단계 — 데이터를 여러 각도로 살펴봅니다. 분포·결측·커버리지·시즌성·관계.")
 
 # ⚠️ 본인의 GitHub 사용자명 / 리포지토리명 / 브랜치명에 맞춰 BASE_URL 설정
-GITHUB_BASE_URL = "https://raw.githubusercontent.com/kwjw0/trading-area-bi/namjiwoo"
+GITHUB_BASE_URL = "https://github.com/IntelligentAgentLab/trading-area-bi/tree/namjiwoo"
 
 with st.sidebar:
     st.header("⚙️ 데이터 로드 설정")
