@@ -304,18 +304,18 @@ with st.sidebar:
 # 1. 파일 경로 설정 (GitHub 리포지토리 상대 경로 지정)
 # ----------------------------------------------------------------
 # 상권 자치구 데이터 CSV 경로 (예시)
-sales_url  = f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/서울시상권분석서비스(추정매출-자치구).csv" 
-flow_url   = f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/서울시상권분석서비스(길단위인구-자치구).csv"
-work_url   = f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/서울시상권분석서비스(직장인구-자치구).csv"
-store_url  = f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/서울시상권분석서비스(점포-자치구).csv"
-change_url = f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/서울시상권분석서비스(상권변화지표-자치구).csv"
+sales_url  = f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/서울시상권분석서비스(추정매출-자치구).csv" 
+flow_url   = f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/서울시상권분석서비스(길단위인구-자치구).csv"
+work_url   = f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/서울시상권분석서비스(직장인구-자치구).csv"
+store_url  = f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/서울시상권분석서비스(점포-자치구).csv"
+change_url = f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/서울시상권분석서비스(상권변화지표-자치구).csv"
 
 # 상품권 데이터 경로 (예시 - 필요시 실제 파일 이름으로 변경)
-payments_zip_url = [f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/2023년_자치구별_업종별_서울사랑상품권_결제내역.zip",
-                    f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/2024년_자치구별_업종별_서울사랑상품권_결제내역.zip",
-                    f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/2025년_자치구별_업종별_서울사랑상품권_결제내역.zip"]
-issue_url  = f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/월별_서울사랑상품권_발행_및_판매현황(202404~202603).xlsx"
-merchant_url = f"{GITHUB_BASE_URL}/data/raw/seoul_trading-area/서울사랑상품권_유효_가맹점(25.8.22_기준).csv"
+payments_zip_url = [f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/2023년_자치구별_업종별_서울사랑상품권_결제내역.zip",
+                    f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/2024년_자치구별_업종별_서울사랑상품권_결제내역.zip",
+                    f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/2025년_자치구별_업종별_서울사랑상품권_결제내역.zip"]
+issue_url  = f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/월별_서울사랑상품권_발행_및_판매현황(202404~202603).xlsx"
+merchant_url = f"{GITHUB_BASE_URL}/data/raw/seoul_trading_area/서울사랑상품권_유효_가맹점(25.8.22_기준).csv"
 
 # ----------------------------------------------------------------
 # 2. 데이터 가져오기 및 가공
