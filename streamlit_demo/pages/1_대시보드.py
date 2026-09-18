@@ -314,7 +314,7 @@ change_url = f"{GITHUB_BASE_URL}/data/raw/seoul%20trading-area/서울시상권�
 payments_zip_url = [f"{GITHUB_BASE_URL}/data/raw/seoul%20trading-area/2023년_자치구별_업종별_서울사랑상품권_결제내역.zip",
                     f"{GITHUB_BASE_URL}/data/raw/seoul%20trading-area/2024년_자치구별_업종별_서울사랑상품권_결제내역.zip",
                     f"{GITHUB_BASE_URL}/data/raw/seoul%20trading-area/2025년_자치구별_업종별_서울사랑상품권_결제내역.zip"]
-issue_url  = f"{GITHUB_BASE_URL}/data/raw/seoul%20trading-area/월별%20서울사랑상품권_발행_및_판매현황(202404~202603).xlsx"
+issue_url  = f"{GITHUB_BASE_URL}/data/raw/seoul%20trading-area/월별_서울사랑상품권_발행_및_판매현황(202404~202603).xlsx"
 merchant_url = f"{GITHUB_BASE_URL}/data/raw/seoul%20trading-area/서울사랑상품권_유효_가맹점(25.8.22_기준).csv"
 
 # ----------------------------------------------------------------
