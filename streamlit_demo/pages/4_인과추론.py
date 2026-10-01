@@ -1,5 +1,9 @@
 import streamlit as st
 
+<<<<<<< HEAD
+=======
+st.set_page_config(page_title="인과추론", page_icon="📈", layout="wide")
+>>>>>>> b175961fe7422b3e89c206c2f2030e36ccf08cdf
 st.title("📈 인과추론")
 
 st.info(
