@@ -24,6 +24,7 @@
 import io
 import re
 import zipfile
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -42,6 +43,7 @@ GU25 = ["종로구","중구","용산구","성동구","광진구","동대문구",
         "도봉구","노원구","은평구","서대문구","마포구","양천구","강서구","구로구","금천구",
         "영등포구","동작구","관악구","서초구","강남구","송파구","강동구"]
 YEARS = (2023, 2024, 2025)
+DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "raw" / "seoul_trading_area"
 
 # 서울페이업종(20) ← 추정매출 업종명에 나타나는 키워드. 위에서부터 먼저 매칭(구체적 우선).
 SEOULPAY_RULES = [
@@ -79,6 +81,19 @@ SEOULPAY_RULES = [
 # ════════════════════════════════════════════════════════════════
 def num(s):
     return pd.to_numeric(s, errors="coerce")
+
+
+@st.cache_data(show_spinner=False)
+def read_local_bytes(path, modified_ns):
+    return Path(path).read_bytes()
+
+
+def local_bytes(pattern):
+    paths = sorted(DATA_DIR.rglob(pattern))
+    if not paths:
+        return None
+    path = paths[-1]
+    return read_local_bytes(str(path), path.stat().st_mtime_ns)
 
 
 def _norm(s):
@@ -307,6 +322,7 @@ st.caption("자치구×분기 이중차분(DiD)·이벤트스터디로 '발매 �
            "분기 고정효과가 명절 시즌성을 흡수합니다.")
 
 with st.sidebar:
+    st.caption("저장된 데이터가 자동으로 불러와집니다. 업로드 파일은 해당 데이터를 대체합니다.")
     st.header("① 상품권 3종")
     f_pay = st.file_uploader("결제내역 (월별 xlsx 여러 개 또는 zip)",
                              type=["xlsx", "zip"], accept_multiple_files=True, key="p")
@@ -323,8 +339,19 @@ if not HAS_SM:
     st.error("statsmodels가 필요합니다:  pip install statsmodels")
     st.stop()
 
-pay = load_payment([(f.name, f.getvalue()) for f in f_pay]) if f_pay else None
-mer = load_merchant(f_mer.getvalue()) if f_mer else None
+payment_files = ([(f.name, f.getvalue()) for f in f_pay] if f_pay else
+                 [(p.name, read_local_bytes(str(p), p.stat().st_mtime_ns))
+                  for p in sorted(DATA_DIR.rglob("*자치구별 업종별 서울사랑상품권 결제내역.xlsx"))])
+issue_bytes = f_iss.getvalue() if f_iss else local_bytes("월별_서울사랑상품권_발행_및_판매현황*.xlsx")
+merchant_bytes = f_mer.getvalue() if f_mer else local_bytes("서울사랑상품권_유효_가맹점*.csv")
+sales_bytes = f_sales.getvalue() if f_sales else local_bytes("서울시상권분석서비스(추정매출-자치구).csv")
+flow_bytes = f_flow.getvalue() if f_flow else local_bytes("서울시상권분석서비스(길단위인구-자치구).csv")
+work_bytes = f_work.getvalue() if f_work else local_bytes("서울시상권분석서비스(직장인구-자치구).csv")
+store_bytes = f_store.getvalue() if f_store else local_bytes("서울시상권분석서비스(점포-자치구).csv")
+change_bytes = f_change.getvalue() if f_change else local_bytes("서울시상권분석서비스(상권변화지표-자치구).csv")
+
+pay = load_payment(payment_files) if payment_files else None
+mer = load_merchant(merchant_bytes) if merchant_bytes else None
 
 
 # ════════════════════════════════════════════════════════════════
@@ -426,12 +453,12 @@ def build_panels(sales_b, issue_b, flow_b, worker_b, store_b, change_b, exposure
 
 
 panel, panel_ie, err = build_panels(
-    f_sales.getvalue() if f_sales else None,
-    f_iss.getvalue() if f_iss else None,
-    f_flow.getvalue() if f_flow else None,
-    f_work.getvalue() if f_work else None,
-    f_store.getvalue() if f_store else None,
-    f_change.getvalue() if f_change else None,
+    sales_bytes,
+    issue_bytes,
+    flow_bytes,
+    work_bytes,
+    store_bytes,
+    change_bytes,
     exposure)
 
 
@@ -448,10 +475,10 @@ with t0:
     pay_q = pay.groupby(["year", "q"]).ngroups if pay is not None else 0
     status = {
         "결제내역(노출·기전)": (pay is not None, f"{pay_q}분기" if pay is not None else ""),
-        "발행·판매(처치 D)": (f_iss is not None, ""),
+        "발행·판매(처치 D)": (issue_bytes is not None, ""),
         "가맹점(노출 규모)": (mer is not None, f"{len(mer):,}개" if mer is not None else ""),
-        "추정매출(결과 Y)": (f_sales is not None, "필수"),
-        "유동인구·직장·점포·상권변화(통제)": (any([f_flow, f_work, f_store, f_change]), ""),
+        "추정매출(결과 Y)": (sales_bytes is not None, "필수"),
+        "유동인구·직장·점포·상권변화(통제)": (any([flow_bytes, work_bytes, store_bytes, change_bytes]), ""),
     }
     st.table(pd.DataFrame([{"데이터": k, "적재": "✅" if v[0] else "—", "비고": v[1]}
                            for k, v in status.items()]))
