@@ -6,26 +6,25 @@
 목적: 분포·결측·커버리지·이상치·시즌성·관계를 파악해 이후 모델링 결정
      (로그변환 여부, 사용할 분기, 평행추세 가능성, 이상치 처리)을 준비.
 
-데이터: GitHub 저장소(data/raw/seoul_trading_area)에서 자동으로 불러온다(gh_data.py).
-  로컬에 같은 폴더가 있으면 그것을 우선 쓰고, 사이드바 업로드로 파일별 덮어쓰기도 가능.
+데이터: 저장소의 data/raw/seoul_trading_area 폴더에서 자동으로 불러온다.
   상품권: 결제내역 · 발행판매 · 가맹점 / 상권 자치구(2023~2025 분기): 추정매출 · 길단위인구 · 직장인구 · 점포 · 상권변화지표
 
 성격: 순수 탐색용. 중립적 기술통계·그림만 제공하고 인과 해석은 넣지 않는다.
 
 실행: pip install streamlit pandas numpy plotly openpyxl
-      streamlit run eda_app.py   (gh_data.py 를 같은 폴더에 둘 것)
+      streamlit run app.py
 """
 
 import io
 import re
 import zipfile
+from pathlib import Path
+from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-
-from gh_data import data_sidebar
 
 st.set_page_config(page_title="상품권×상권 EDA", layout="wide")
 
@@ -71,6 +70,51 @@ def read_table(b):
         if ok(df):
             return df
     return pd.read_csv(io.BytesIO(b), encoding="cp949", encoding_errors="ignore")
+
+
+def load_local_data():
+    raw_dir = Path(__file__).resolve().parents[2] / "data" / "raw" / "seoul_trading_area"
+    if not raw_dir.is_dir():
+        st.sidebar.error(f"원본 데이터 폴더를 찾을 수 없습니다: {raw_dir}")
+        return SimpleNamespace(pay=[], issue=None, merchant=None, sales=None,
+                                flow=None, work=None, store=None, change=None)
+
+    paths = sorted(p for p in raw_dir.rglob("*") if p.is_file() and not p.name.startswith("~$"))
+    payment_paths = [p for p in paths if p.suffix.lower() == ".xlsx"
+                     and any("결제내역" in part for part in p.parts)]
+
+    def file_bytes(predicate, extensions):
+        path = next((p for p in paths if p.suffix.lower() in extensions and predicate(p)), None)
+        return path.read_bytes() if path else None
+
+    issue_path = next((p for p in paths if p.suffix.lower() in (".xlsx", ".xls")
+                       and "발행 및 판매 현황" in p.name), None)
+    merchant_paths = [p for p in paths if p.suffix.lower() in (".csv", ".xlsx", ".xls")
+                      and "유효 가맹점" in p.name]
+    merchant_path = next((p for p in merchant_paths if p.suffix.lower() == ".csv"),
+                         merchant_paths[-1] if merchant_paths else None)
+
+    data = SimpleNamespace(
+        pay=[(str(p), p.read_bytes()) for p in payment_paths],
+        issue=issue_path.read_bytes() if issue_path else None,
+        merchant=merchant_path.read_bytes() if merchant_path else None,
+        sales=file_bytes(lambda p: "추정매출-자치구" in p.name, (".csv",)),
+        flow=file_bytes(lambda p: "길단위인구-자치구" in p.name, (".csv",)),
+        work=file_bytes(lambda p: "직장인구-자치구" in p.name, (".csv",)),
+        store=file_bytes(lambda p: "점포-자치구" in p.name, (".csv",)),
+        change=file_bytes(lambda p: "상권변화지표-자치구" in p.name, (".csv",)),
+    )
+
+    st.sidebar.subheader("자동으로 불러온 데이터")
+    st.sidebar.caption(str(raw_dir))
+    st.sidebar.write(f"결제내역: {len(data.pay)}개 파일")
+    for label, content in (
+        ("발행·판매", data.issue), ("유효 가맹점", data.merchant),
+        ("추정매출", data.sales), ("길단위인구", data.flow),
+        ("직장인구", data.work), ("점포", data.store), ("상권변화지표", data.change),
+    ):
+        st.sidebar.write(f"{label}: {'불러옴' if content is not None else '파일 없음'}")
+    return data
 
 
 def gu_name_col(df):
@@ -240,15 +284,25 @@ METRICS_ALL = ["발행", "판매", "결제", "매출", "유동인구", "직장�
 st.title("🔬 서울사랑상품권 × 상권  EDA 대시보드")
 st.caption("인과추론 이전 단계 — 데이터를 여러 각도로 살펴봅니다. 분포·결측·커버리지·시즌성·관계.")
 
-D = data_sidebar()
+D = load_local_data()
 
 pay = load_payment(D.pay) if D.pay else None
 iss = load_issue(D.issue) if D.issue else None
-mer = D.merchant            # 자치구×업종별 가맹점 수 표(gu, 업종, n)
+merchant = read_table(D.merchant) if D.merchant else None
+if merchant is not None:
+    merchant_gu_col, merchant_industry_col = gu_name_col(merchant), induty_col(merchant)
+    if merchant_gu_col and merchant_industry_col:
+        mer = (merchant.groupby(merchant_industry_col)[merchant_gu_col]
+               .count().rename("n").reset_index()
+               .rename(columns={merchant_industry_col: "업종"}))
+    else:
+        st.sidebar.warning("가맹점 파일에서 자치구·업종 열을 찾지 못해 가맹점 분석을 생략합니다.")
+        mer = None
+else:
+    mer = None
 
 if pay is None and iss is None and D.sales is None:
-    st.info("저장소에서 데이터를 불러오지 못했습니다. 왼쪽 '불러온 데이터' 현황과 경고를 확인하거나, "
-            "'직접 업로드로 덮어쓰기'에서 파일을 올려 주세요.")
+    st.info("분석에 필요한 데이터를 찾을 수 없습니다. data/raw/seoul_trading_area 폴더와 파일명을 확인해 주세요.")
     st.stop()
 
 panel = build_panel(pay, iss, D.sales, D.flow, D.work, D.store, D.change)
@@ -370,7 +424,7 @@ with t3:
 with t4:
     st.markdown("#### 업종 구조 (상품권)")
     if pay is None and mer is None:
-        st.info("결제내역 또는 가맹점 파일을 올리면 표시됩니다.")
+        st.info("결제내역 또는 유효 가맹점 파일을 data/raw/seoul_trading_area에 두면 표시됩니다.")
     if pay is not None:
         gu = pay[pay["구분"] == "자치구"]
         bi = (gu.groupby("업종")["순결제액"].sum() / 1e8).sort_values(ascending=False).reset_index()
@@ -402,7 +456,7 @@ with t5:
     st.markdown("#### 지표 간 관계 (가설 발굴용 — 인과 아님)")
     numcols = [m for m in have]
     if len(numcols) < 2:
-        st.info("서로 다른 데이터 2종 이상을 올리면 지표 간 관계를 볼 수 있습니다.")
+        st.info("서로 다른 상권 데이터 2종 이상이 있으면 지표 간 관계를 볼 수 있습니다.")
     else:
         unit = st.radio("분석 단위", ["자치구(기간 합산)", "자치구×분기"], horizontal=True)
         if unit.startswith("자치구("):
