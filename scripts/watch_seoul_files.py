@@ -39,6 +39,13 @@ PAGE_URL = "https://data.seoul.go.kr/dataList/{inf_id}/F/1/datasetView.do"
 DOWNLOAD_URL = "https://datafile.seoul.go.kr/bigfile/iot/inf/nio_download.do?&useCache=false"
 HEADERS = {"User-Agent": "Mozilla/5.0 (trading-area-bi data watch)"}
 
+# 아래 검사들은 streamlit_demo/pages/1_대시보드.py의 로더가 각 파일에 기대하는 모양과 맞춘 것이다.
+# 포털 파일은 사람이 만들어 올리는 엑셀이라 형식이 예고 없이 바뀔 수 있는데, 그대로 받아 넣으면
+# 페이지가 조용히 빈 값이나 엉뚱한 값을 그린다 - 로더가 못 읽을 파일은 넣지 않고 알리는 쪽이 낫다.
+GU25 = ["종로구", "중구", "용산구", "성동구", "광진구", "동대문구", "중랑구", "성북구", "강북구",
+        "도봉구", "노원구", "은평구", "서대문구", "마포구", "양천구", "강서구", "구로구", "금천구",
+        "영등포구", "동작구", "관악구", "서초구", "강남구", "송파구", "강동구"]
+
 EXT = r"(?:xlsx|xlsm|xls|csv|zip|hwpx|hwp|pdf|txt|json|xml)"
 NAME_RE = re.compile(r"[^\n\r\t]*?\." + EXT + r"(?![A-Za-z0-9])", re.I)
 CALL_RE = re.compile(r"downloadFile\(\s*['\"]?(\d+)['\"]?\s*\)")
@@ -98,12 +105,37 @@ def download(target, seq, dest, referer):
     return size, served
 
 
+def check_payment(path, name):
+    """로더(_payment_one)는 파일명 앞의 두 숫자를 연·월로, 첫 시트 첫 열을 발행처(자치구)로 읽는다."""
+    import pandas as pd
+
+    if not re.match(r"\d{2}년\d{2}월", name):
+        raise RuntimeError("파일명이 'NN년NN월'로 시작하지 않아 연·월을 읽을 수 없습니다")
+    df = pd.read_excel(path, sheet_name=0, header=0)
+    found = set(df.iloc[:, 0].astype(str).str.strip()) & set(GU25)
+    if len(found) < len(GU25):
+        raise RuntimeError(f"첫 열에서 자치구 25개 중 {len(found)}개만 찾았습니다 (표 형식이 바뀌었을 수 있음)")
+
+
+def check_issue(path, name):
+    """로더(load_issue)는 'NN년N월' 형태의 시트만 읽는다 - 그런 시트가 하나도 없으면 빈 데이터가 된다."""
+    import pandas as pd
+
+    sheets = pd.ExcelFile(path).sheet_names
+    if not any(re.match(r"\s*\d+\s*년\s*\d+\s*월", str(n)) for n in sheets):
+        raise RuntimeError(f"'NN년N월' 형태의 시트가 없습니다 (실제 시트: {sheets[:5]})")
+
+
+CHECKS = {"payment": check_payment, "issue": check_issue}
+
+
 def to_csv(src, out_csv, columns):
-    """엑셀/CSV를 cp949 CSV로 바꾼다. columns가 원본에 다 있으면 그 열만 남긴다.
+    """엑셀/CSV를 cp949 CSV로 바꾸면서 columns에 적힌 열만 남긴다.
 
     1_대시보드.py의 가맹점 로더(read_table)는 CSV만 읽을 수 있는데 포털은 xlsx와 csv를 번갈아
     올린다. 그리고 페이지가 실제로 쓰는 열은 자치구·업종 둘뿐이라 나머지(상호·주소 등)를 버리면
-    45MB → 10MB 안팎으로 줄어든다. 열 이름이 바뀌어 못 찾으면 전체 열을 그대로 두고 그 사실을 알린다.
+    45MB → 10MB 안팎으로 줄어든다. 열을 못 찾으면 기존 파일을 건드리지 않고 실패시킨다 - 전체
+    열을 그냥 저장하면 페이지가 자치구·업종 열을 못 찾아 가맹점 분석이 통째로 빠지기 때문.
     """
     import pandas as pd
 
@@ -115,14 +147,11 @@ def to_csv(src, out_csv, columns):
         except UnicodeDecodeError:
             df = pd.read_csv(src, dtype=str, encoding="utf-8-sig")
     df.columns = [str(c).strip() for c in df.columns]
-    note = f"CSV로 변환, {len(df):,}행"
-    if columns:
-        missing = [c for c in columns if c not in df.columns]
-        if missing:
-            note += f". 열 {missing}을 찾지 못해 전체 열을 유지함 (실제 열: {list(df.columns)})"
-        else:
-            df = df[columns]
-            note += f", 열 {columns}만 남김"
+    missing = [c for c in columns if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"열 {missing}을 찾지 못했습니다 (실제 열: {list(df.columns)[:15]})")
+    df = df[columns]
+    note = f"CSV로 변환, {len(df):,}행, 열 {columns}만 남김"
     tmp = out_csv.with_suffix(".tmp")
     df.to_csv(tmp, index=False, encoding="cp949", errors="replace")
     tmp.replace(out_csv)
@@ -153,8 +182,10 @@ def store(target, seq, name, referer):
     size, _ = download(target, seq, tmp, referer)
     note = ""
     try:
+        if target.get("check"):
+            CHECKS[target["check"]](tmp, name)
         if target.get("to_csv"):
-            note = " (" + to_csv(tmp, final, target.get("columns")) + ")"
+            note = " (" + to_csv(tmp, final, target["columns"]) + ")"
         else:
             if size > MAX_BYTES:
                 raise RuntimeError(f"{size / 1e6:.0f}MB로 GitHub 한도(100MB)에 걸려 저장하지 않았습니다")
@@ -237,8 +268,9 @@ def run_watch(targets):
                 lines.append(f"- 새 파일 **{fname}** → {store(t, seq, fname, url)}")
                 print(f"[새 파일] {name}: {fname}")
             except Exception as exc:
-                lines.append(f"- 새 파일 **{fname}** → 자동 다운로드 실패({exc}). 직접 받아 올려 주세요.")
-                print(f"[다운로드 실패] {name}: {fname}: {exc}")
+                lines.append(f"- 새 파일 **{fname}** → 자동 반영 실패: {exc}. "
+                             "기존 파일은 그대로 두었습니다. 포털에서 직접 확인해 주세요.")
+                print(f"[반영 실패] {name}: {fname}: {exc}")
         report.append("\n".join(lines))
 
     state["_checked_at"] = datetime.datetime.now(KST).isoformat(timespec="seconds")

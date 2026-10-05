@@ -5,7 +5,8 @@
     "inf_id": "OA-22395",
     "match": "^\\d{2}년\\d{2}월 자치구별 업종별 서울사랑상품권 결제내역\\.xlsx$",
     "mode": "all",
-    "dest": "gift_payment/{year}"
+    "dest": "gift_payment/{year}",
+    "check": "payment"
   },
   {
     "name": "gift_issue",
@@ -14,7 +15,8 @@
     "match": "발행 및 판매 현황.*\\.xlsx$",
     "mode": "latest",
     "dest": "gift_issue",
-    "filename": "월별 서울사랑상품권 발행 및 판매 현황"
+    "filename": "월별 서울사랑상품권 발행 및 판매 현황",
+    "check": "issue"
   },
   {
     "name": "gift_merchant",

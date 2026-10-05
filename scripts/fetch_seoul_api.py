@@ -13,6 +13,7 @@ import csv
 import datetime
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -35,6 +36,13 @@ KST = datetime.timezone(datetime.timedelta(hours=9))
 # 그래서 응답이 중간에 잘리면 과거 분기가 조용히 사라질 수 있음 - 직전 수집보다 건수가 이 비율
 # 밑으로 줄면 덮어쓰지 않고 실패 처리한다(데이터는 분기마다 늘기만 하는 게 정상).
 MIN_KEEP_RATIO = 0.9
+
+# 1_대시보드.py는 자치구 이름이 이 25개와 정확히 같고, 분기 코드가 "20261"(연도4자리+분기1자리)
+# 형태일 때만 그 행을 쓴다(agg_gu_quarter, parse_yq). API 쪽 표기가 바뀌면 파일은 멀쩡히 받아지는데
+# 페이지에서는 지표가 통째로 비어 보이게 되므로, 받은 직후에 같은 조건으로 미리 확인한다.
+GU25 = ["종로구", "중구", "용산구", "성동구", "광진구", "동대문구", "중랑구", "성북구", "강북구",
+        "도봉구", "노원구", "은평구", "서대문구", "마포구", "양천구", "강서구", "구로구", "금천구",
+        "영등포구", "동작구", "관악구", "서초구", "강남구", "송파구", "강동구"]
 
 
 def get_json(url):
@@ -74,6 +82,18 @@ def fetch_rows(service, key, limit=None):
             return rows, total
         start = end + 1
         time.sleep(0.2)
+
+
+def check_rows(rows):
+    """대시보드 로더가 읽을 수 있는 모양인지 확인한다. 문제가 있으면 예외."""
+    gus = {str(r.get("SIGNGU_CD_NM", "")).strip() for r in rows}
+    missing = [g for g in GU25 if g not in gus]
+    if missing:
+        raise RuntimeError(f"자치구 {len(missing)}개가 빠졌습니다: {missing[:5]}")
+    bad = next((r.get("STDR_YYQU_CD") for r in rows
+                if not re.fullmatch(r"\d{4}[1-4]", str(r.get("STDR_YYQU_CD", "")).strip())), None)
+    if bad is not None:
+        raise RuntimeError(f"분기 코드 형식이 바뀌었습니다: {bad!r}")
 
 
 def write_csv(path, rows, columns):
@@ -136,6 +156,7 @@ def main():
             before = index.get(name, {}).get("count", 0)
             if len(rows) < before * MIN_KEEP_RATIO:
                 raise RuntimeError(f"건수가 {before} → {len(rows)}로 줄어 덮어쓰지 않았습니다")
+            check_rows(rows)
             write_csv(RAW_DIR / ds["filename"], rows, ds["columns"])
             quarters = sorted({str(r.get("STDR_YYQU_CD")) for r in rows})
             index[name] = {"file": ds["filename"], "count": len(rows), "updated_at": now,

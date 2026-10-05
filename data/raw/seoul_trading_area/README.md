@@ -38,5 +38,5 @@ seoul_trading_area/
 ## 자동 갱신이 안 될 때
 
 - 워크플로가 실패하거나 새 파일이 올라오면 GitHub Issue가 만들어진다.
-- Issue에 "자동 다운로드 실패"라고 적혀 있으면, 포털에서 직접 받아 위 규칙대로 해당 폴더에 올리면 된다.
+- Issue에 "자동 반영 실패"라고 적혀 있으면 포털 파일의 형식이 바뀐 것이다. 기존 파일은 그대로 있으니, 포털에서 직접 받아 형식을 확인한 뒤 위 규칙대로 해당 폴더에 올리면 된다.
 - 로컬 점검: `python scripts/fetch_seoul_api.py --check`, `python scripts/watch_seoul_files.py --list`
