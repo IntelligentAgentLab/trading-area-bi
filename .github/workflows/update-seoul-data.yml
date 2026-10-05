@@ -8,6 +8,8 @@ on:
     # 원본은 분기·수시 갱신이고 공개일이 일정하지 않아 매주 확인한다. 바뀐 게 없으면 데이터 커밋은 없다.
     - cron: "17 21 * * 0"
   workflow_dispatch: # Actions 탭에서 수동 실행
+  push:
+    branches: [jaewon]
 
 permissions:
   contents: write # data/raw/seoul_trading_area 커밋
@@ -71,3 +73,4 @@ jobs:
           gh issue create \
             --title "서울 데이터 갱신 알림 ($(TZ=Asia/Seoul date +%Y-%m-%d))" \
             --body-file update_report.md
+            
