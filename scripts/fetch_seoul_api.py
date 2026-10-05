@@ -2,7 +2,11 @@
 
 사용법:
     python scripts/fetch_seoul_api.py --check    # 저장 없이 서비스명·필드명만 확인 (5건씩만 조회)
-    python scripts/fetch_seoul_api.py            # 전체 수집 후 CSV 교체
+    python scripts/fetch_seoul_api.py            # 전체 수집, 내용이 바뀐 CSV만 교체
+
+포털의 이 데이터셋들은 파일명이 그대로인 채 분기마다 행이 추가되는 방식이다. API도 같은 원본을
+보여주므로, 매번 전체를 받아 지금 파일과 내용을 비교하고 달라졌을 때만 교체한다. 무엇이 바뀌었는지는
+update_report.md에 적는다(워크플로가 GitHub Issue로 알림).
 
 받을 데이터셋 목록과 "API 필드명 → CSV 열 이름" 매핑은 scripts/seoul_api.json에 있다.
 인증키는 .env 또는 환경변수의 SEOUL_API_KEY (data.go.kr 키와 별개 — data.seoul.go.kr에서 발급).
@@ -10,7 +14,7 @@
 요청 형식: http://openapi.seoul.go.kr:8088/{인증키}/json/{서비스명}/{시작행}/{끝행}/
 """
 import csv
-import datetime
+import io
 import json
 import os
 import re
@@ -30,7 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw" / "seoul_trading_area"
 CONFIG_PATH = Path(__file__).resolve().parent / "seoul_api.json"
 INDEX_PATH = RAW_DIR / "_meta" / "api_index.json"
-KST = datetime.timezone(datetime.timedelta(hours=9))
+REPORT_PATH = ROOT / "update_report.md"
 
 # 이 API에는 분기로 걸러 받는 요청인자가 없어서 매번 전 기간을 통째로 받아 파일을 교체한다.
 # 그래서 응답이 중간에 잘리면 과거 분기가 조용히 사라질 수 있음 - 직전 수집보다 건수가 이 비율
@@ -96,25 +100,30 @@ def check_rows(rows):
         raise RuntimeError(f"분기 코드 형식이 바뀌었습니다: {bad!r}")
 
 
-def write_csv(path, rows, columns):
-    """columns(API 필드명 → CSV 열 이름)에 적힌 열만, 그 순서로 저장한다.
+def to_csv_bytes(rows, columns):
+    """columns(API 필드명 → CSV 열 이름)에 적힌 열만, 그 순서로 담은 CSV를 만든다.
 
     형식은 포털에서 직접 내려받은 CSV와 맞춘다(cp949, 모든 값 따옴표) - 1_대시보드.py의 로더가
     cp949를 먼저 시도하고, 팀원이 수동으로 받은 파일과 섞여도 diff가 덜 지저분하다.
     """
+    buf = io.StringIO(newline="")
+    writer = csv.writer(buf, quoting=csv.QUOTE_ALL, lineterminator="\r\n")
+    writer.writerow(columns.values())
+    for row in rows:
+        line = []
+        for field in columns:
+            v = row.get(field, "")
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)  # JSON 숫자가 12345.0으로 찍히지 않게
+            line.append("" if v is None else v)
+        writer.writerow(line)
+    return buf.getvalue().encode("cp949", errors="replace")
+
+
+def replace_file(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    with open(tmp, "w", newline="", encoding="cp949", errors="replace") as f:
-        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-        writer.writerow(columns.values())
-        for row in rows:
-            line = []
-            for field in columns:
-                v = row.get(field, "")
-                if isinstance(v, float) and v.is_integer():
-                    v = int(v)  # JSON 숫자가 12345.0으로 찍히지 않게
-                line.append("" if v is None else v)
-            writer.writerow(line)
+    tmp.write_bytes(content)
     tmp.replace(path)  # 다 쓴 뒤에 바꿔치기 - 쓰다 죽어도 기존 파일이 반쯤 깨진 채 남지 않게
 
 
@@ -143,32 +152,47 @@ def main():
         check(datasets, key)
         return
 
-    now = datetime.datetime.now(KST).isoformat(timespec="seconds")
+    # 기록 파일에는 시각을 넣지 않는다 - 넣으면 바뀐 게 없는 날에도 파일이 달라져 매번 커밋이 생긴다.
     index = json.loads(INDEX_PATH.read_text(encoding="utf-8")) if INDEX_PATH.exists() else {}
-    failed = []
+    failed, report = [], []
     for ds in datasets:
-        name = ds["name"]
+        name, path = ds["name"], RAW_DIR / ds["filename"]
+        prev = index.get(name, {})
         try:
             rows, _ = fetch_rows(ds["service"], key)
             absent = [f for f in ds["columns"] if rows and f not in rows[0]]
             if absent:
                 raise RuntimeError(f"API 응답에 없는 필드: {absent} (명세가 바뀌었을 수 있음)")
-            before = index.get(name, {}).get("count", 0)
-            if len(rows) < before * MIN_KEEP_RATIO:
-                raise RuntimeError(f"건수가 {before} → {len(rows)}로 줄어 덮어쓰지 않았습니다")
+            if len(rows) < prev.get("count", 0) * MIN_KEEP_RATIO:
+                raise RuntimeError(f"건수가 {prev['count']} → {len(rows)}로 줄어 덮어쓰지 않았습니다")
             check_rows(rows)
-            write_csv(RAW_DIR / ds["filename"], rows, ds["columns"])
-            quarters = sorted({str(r.get("STDR_YYQU_CD")) for r in rows})
-            index[name] = {"file": ds["filename"], "count": len(rows), "updated_at": now,
-                           "first_quarter": quarters[0], "last_quarter": quarters[-1], "status": "ok"}
-            print(f"[성공] {name}: {len(rows)}건 ({quarters[0]}~{quarters[-1]})")
+            # API가 돌려주는 순서는 보장이 없다. 순서만 달라져도 "바뀜"으로 잡히지 않게 고정해 둔다.
+            rows.sort(key=lambda r: [str(r.get(f, "")) for f in list(ds["columns"])[:5]], reverse=True)
+            content = to_csv_bytes(rows, ds["columns"])
+            quarters = sorted({str(r["STDR_YYQU_CD"]) for r in rows})
+            entry = {"file": ds["filename"], "count": len(rows), "first_quarter": quarters[0],
+                     "last_quarter": quarters[-1], "status": "ok"}
+            if path.exists() and path.read_bytes() == content:
+                print(f"[변화 없음] {name}: {len(rows)}건 ({quarters[0]}~{quarters[-1]})")
+            else:
+                replace_file(path, content)
+                if prev.get("status") == "ok":  # 처음 정렬·형식을 맞추는 교체는 알릴 일이 아니다
+                    what = (f"새 분기 {prev['last_quarter']} → {quarters[-1]}"
+                            if prev.get("last_quarter") != quarters[-1] else "기존 분기의 값이 수정됨")
+                    report.append(f"- **{ds['filename'].split('/')[-1]}** → {what} "
+                                  f"({prev.get('count', 0):,} → {len(rows):,}건)")
+                print(f"[갱신] {name}: {len(rows)}건 ({quarters[0]}~{quarters[-1]})")
+            index[name] = entry
         except Exception as exc:  # 하나가 실패해도 나머지는 계속 - 실패한 것은 기존 파일 유지
             failed.append(name)
-            index.setdefault(name, {}).update(status="failed", last_error=str(exc)[:200], last_error_at=now)
+            index[name] = {**prev, "status": "failed", "last_error": str(exc)[:200]}
             print(f"[실패] {name}: {exc}")
 
     INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
     INDEX_PATH.write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    if report:
+        with open(REPORT_PATH, "a", encoding="utf-8") as f:
+            f.write("### 상권분석서비스 (Open API)\n" + "\n".join(report) + "\n\n")
     if failed:
         sys.exit(f"실패한 데이터셋: {', '.join(failed)}")
 

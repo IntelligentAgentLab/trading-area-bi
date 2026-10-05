@@ -40,12 +40,12 @@ scripts/                  데이터 수집·가공 스크립트
   ├─ fetch_consumer_counsel.py            1372 API 수집 (원본 JSON)
   ├─ build_consumer_counsel_summary.py    원본 → 집계 CSV(월별/지역별, git 포함)
   ├─ build_news_topics.py                 BigKinds 뉴스 → LDA 토픽모델링
-  ├─ fetch_seoul_api.py                   서울 상권분석서비스 5종 수집 (Open API, 매월 자동 실행)
-  └─ watch_seoul_files.py                 서울사랑상품권 첨부 파일 감시·다운로드 (매월 자동 실행)
+  ├─ fetch_seoul_api.py                   서울 상권분석서비스 5종 수집 (Open API, 매주 자동 실행)
+  └─ watch_seoul_files.py                 서울사랑상품권 첨부 파일 감시·다운로드 (매주 자동 실행)
 
 data/
   ├─ raw/                 원본 데이터 (git 미포함 — 각자 준비 필요, 아래 참고)
-  │   └─ seoul_trading_area/   예외로 git 포함 — GitHub Actions가 매월 자동 갱신 (폴더 안 README 참고)
+  │   └─ seoul_trading_area/   예외로 git 포함 — GitHub Actions가 매주 확인해 자동 갱신 (폴더 안 README 참고)
   └─ processed/            가공된 결과 CSV (git 포함 — 바로 대시보드 실행 가능)
 ```
 
