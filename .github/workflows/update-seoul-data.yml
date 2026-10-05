@@ -1,0 +1,65 @@
+# 서울 열린데이터광장 데이터(상권분석서비스 + 서울사랑상품권)를 매월 갱신한다.
+# 예약 실행(schedule)은 기본 브랜치(main)에 있는 워크플로만 동작한다.
+name: Update Seoul data
+
+on:
+  schedule:
+    # 매월 1일 21:17 UTC = 매월 2일 06:17 KST.
+    # 원본은 분기·수시 갱신이지만 공개일이 일정하지 않아 매월 확인한다. 바뀐 게 없으면 커밋하지 않는다.
+    - cron: "17 21 1 * *"
+  workflow_dispatch: # Actions 탭에서 수동 실행
+
+permissions:
+  contents: write # data/raw/seoul_trading_area 커밋
+  issues: write # 새 파일 알림
+
+concurrency:
+  group: update-seoul-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # requirements.txt 전체(konlpy 등)는 여기서 필요 없어서 수집에 쓰는 것만 설치한다
+      - run: pip install requests python-dotenv pandas openpyxl
+
+      - name: 상권분석서비스 (Open API)
+        env:
+          SEOUL_API_KEY: ${{ secrets.SEOUL_API_KEY }}
+        run: python scripts/fetch_seoul_api.py
+
+      - name: 서울사랑상품권 (첨부 파일 감시)
+        if: always()
+        run: python scripts/watch_seoul_files.py
+
+      # 일부가 실패해도 성공한 것은 반영한다
+      - name: Commit and push
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/raw/seoul_trading_area
+          if git diff --cached --quiet; then
+            echo "변경 없음"
+          else
+            git commit -m "data: 서울 데이터 자동 갱신 ($(TZ=Asia/Seoul date +%Y-%m-%d))"
+            git push
+          fi
+
+      # 새 파일이 있었거나 감시가 깨졌으면 Issue로 알린다 (저장소를 Watch 중이면 메일이 온다)
+      - name: Notify
+        if: always() && hashFiles('watch_report.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "서울 데이터 갱신 알림 ($(TZ=Asia/Seoul date +%Y-%m-%d))" \
+            --body-file watch_report.md

@@ -7,6 +7,8 @@ data/raw/*
 !data/raw/bigkinds/
 data/raw/bigkinds/*
 !data/raw/bigkinds/README.md
+# 서울 상권·상품권 데이터는 용량이 작고 Actions가 매월 자동 갱신해 커밋하므로 예외로 포함한다
+!data/raw/seoul_trading_area/
 
 # 파이썬
 __pycache__/
@@ -15,6 +17,10 @@ __pycache__/
 # 캐시/임시
 .DS_Store
 ~$*.xlsx
+.download_*
+*.tmp
+/_watch_test/
+/watch_report.md
 
 # 문서 (별도 공유, 레포에는 안 올림)
 /docs/

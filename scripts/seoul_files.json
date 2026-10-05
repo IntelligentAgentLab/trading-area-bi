@@ -1,0 +1,33 @@
+[
+  {
+    "name": "gift_payment",
+    "description": "자치구별 업종별 결제내역. 월별 xlsx가 올라올 때마다 연도 폴더에 추가한다. 연말에 올라오는 연도별 zip은 월별 파일과 내용이 겹치므로 받지 않는다.",
+    "inf_id": "OA-22395",
+    "match": "^\\d{2}년\\d{2}월 자치구별 업종별 서울사랑상품권 결제내역\\.xlsx$",
+    "mode": "all",
+    "dest": "gift_payment/{year}"
+  },
+  {
+    "name": "gift_issue",
+    "description": "월별 발행 및 판매 현황. 한 파일에 월별 시트가 누적되는 방식이라 최신 파일 하나만 유지한다.",
+    "inf_id": "OA-22395",
+    "match": "발행 및 판매 현황.*\\.xlsx$",
+    "mode": "latest",
+    "dest": "gift_issue",
+    "filename": "월별 서울사랑상품권 발행 및 판매 현황"
+  },
+  {
+    "name": "gift_merchant",
+    "description": "가맹점 현황. 최신 파일 하나만 유지하고, 페이지가 쓰는 두 열만 남긴 CSV로 바꿔 저장한다.",
+    "inf_id": "OA-21099",
+    "match": "가맹점",
+    "mode": "latest",
+    "dest": "gift_merchant",
+    "filename": "서울사랑상품권 유효 가맹점",
+    "to_csv": true,
+    "columns": [
+      "자치구명",
+      "서울페이업종명"
+    ]
+  }
+]

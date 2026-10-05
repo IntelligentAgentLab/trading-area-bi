@@ -24,6 +24,10 @@ python3 scripts/build_news_topics.py --n-topics 8
 python3 scripts/fetch_consumer_counsel.py --test   # 1페이지만 빠르게 확인
 python3 scripts/fetch_consumer_counsel.py --minutes 20
 python3 scripts/build_consumer_counsel_summary.py
+
+# 서울 상권·상품권 원본 갱신 (.env에 SEOUL_API_KEY 필요) — 평소엔 GitHub Actions가 매월 실행
+python3 scripts/fetch_seoul_api.py --check     # 저장 없이 API 서비스명·필드 매핑만 확인
+python3 scripts/watch_seoul_files.py --list    # 포털 첨부 파일 목록을 제대로 읽는지 확인
 ```
 
 pytest 같은 테스트 스위트는 없습니다. 페이지를 수정한 뒤 검증하는 관행은
@@ -72,6 +76,12 @@ CSV가 있는지 확인해서 있으면 그걸 씁니다. 두 가지 변형이 �
 (용량 크고 개인 API 키나 수동 다운로드가 필요한 원본 데이터)는 `data/raw/bigkinds/README.md`만
 빼고 git에서 제외돼 있고, `data/processed/`는 커밋돼 있어서 아무도 파이프라인 스크립트를 다시 안
 돌려도 앱이 바로 돌아갑니다.
+
+예외가 하나 있습니다: `data/raw/seoul_trading_area/`는 git에 커밋돼 있고 `1_대시보드.py`가 가공
+단계 없이 직접 읽습니다. 용량이 작고, `.github/workflows/update-seoul-data.yml`이 매월
+`scripts/fetch_seoul_api.py`(Open API)와 `scripts/watch_seoul_files.py`(첨부 파일 감시)를 돌려
+자동 커밋하기 때문입니다. 대시보드 로더는 **파일명에 든 글자**로 데이터 종류를 가려내므로 이 폴더의
+파일명을 바꿀 땐 폴더 안 `README.md`의 규칙을 먼저 확인하세요.
 
 - `scripts/build_news_topics.py`: BigKinds 뉴스 엑셀 → Okt 형태소분석 → CountVectorizer →
   `sklearn.decomposition.LatentDirichletAllocation` → `data/processed/news_topic_shares.csv`
