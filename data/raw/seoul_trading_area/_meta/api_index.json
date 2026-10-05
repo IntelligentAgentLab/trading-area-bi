@@ -1,0 +1,37 @@
+{
+ "sales": {
+  "file": "trading_area/서울시 상권분석서비스(추정매출-자치구).csv",
+  "count": 33803,
+  "first_quarter": "20211",
+  "last_quarter": "20262",
+  "status": "ok"
+ },
+ "stores": {
+  "file": "trading_area/서울시 상권분석서비스(점포-자치구).csv",
+  "count": 54765,
+  "first_quarter": "20211",
+  "last_quarter": "20262",
+  "status": "ok"
+ },
+ "workers": {
+  "file": "trading_area/서울시 상권분석서비스(직장인구-자치구).csv",
+  "count": 550,
+  "first_quarter": "20211",
+  "last_quarter": "20262",
+  "status": "ok"
+ },
+ "floating_pop": {
+  "file": "trading_area/서울시 상권분석서비스(길단위인구-자치구).csv",
+  "count": 550,
+  "first_quarter": "20211",
+  "last_quarter": "20262",
+  "status": "ok"
+ },
+ "change_index": {
+  "file": "trading_area/서울시 상권분석서비스(상권변화지표-자치구).csv",
+  "count": 550,
+  "first_quarter": "20211",
+  "last_quarter": "20262",
+  "status": "ok"
+ }
+}
