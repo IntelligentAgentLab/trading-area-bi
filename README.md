@@ -1,3 +1,8 @@
+'''
+최종 스트림릿 링크
+https://trading-area-bigit-wsy4nwvnuecdhsepgmrohp.streamlit.app/
+'''
+
 # 소비상권 BI 프로젝트
 
 구조화 데이터(매출)와 비구조화 데이터(뉴스)를 함께 봐서 "현상 → 원인 → 효과"를 설명하는
